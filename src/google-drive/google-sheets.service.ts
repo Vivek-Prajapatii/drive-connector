@@ -1,6 +1,8 @@
 import { Injectable } from '@nestjs/common';
 import { google, sheets_v4 } from 'googleapis';
 import credentials from 'durable-epoch.json';
+import { ArrayToJson } from 'src/utils/ArrayToJson.util';
+import { mergeEntitiesByIndex } from 'src/utils/MergeObjects.util';
 
 @Injectable()
 export class GoogleSheetsService {
@@ -32,17 +34,41 @@ export class GoogleSheetsService {
 
   async getSheetData(spreadsheetId: string): Promise<any> {
     try {
-      const range = 'patient';
-      const valueRenderOption = '=INDEX(A:G, MATCH("Sangeeta", B:B, 0), 0)';
-      const result = await this.client.spreadsheets.values.get({
+      const resultPatient = await this.client.spreadsheets.values.get({
         spreadsheetId,
-        range,
-        valueRenderOption,
+        range: 'patient',
       });
-      console.log(result.data.values);
-      return result.data.values;
+      const patient = ArrayToJson(resultPatient.data.values);
+
+      const resultPhysician = await this.client.spreadsheets.values.get({
+        spreadsheetId,
+        range: 'physician',
+      });
+      const physician = ArrayToJson(resultPhysician.data.values);
+
+      const resultAppointment = await this.client.spreadsheets.values.get({
+        spreadsheetId,
+        range: 'appointment',
+      });
+      const appointment = ArrayToJson(resultAppointment.data.values);
+
+      const resultPrescription = await this.client.spreadsheets.values.get({
+        spreadsheetId,
+        range: 'prescription',
+      });
+      const prescription = ArrayToJson(resultPrescription.data.values);
+
+      const result = mergeEntitiesByIndex({
+        patient,
+        physician,
+        appointment,
+        prescription,
+      });
+
+      return result;
     } catch (e) {
-      console.log('error while getting spredsheet : ', e);
+      console.log('error while getting spredsheet : ', e.message);
+      return e;
     }
   }
 
@@ -128,18 +154,22 @@ export class GoogleSheetsService {
     }
   }
 
-  async updateSheetData(
-    spreadsheetId: string,
-    range: string,
-    values: any[][],
-  ): Promise<any> {
-    const result = await this.client.spreadsheets.values.update({
-      spreadsheetId,
-      range,
-      valueInputOption: 'RAW',
-      requestBody: { values },
-    });
+  // async updateSheetData(spreadsheetId: string, data: any): Promise<any> {
+  //   const getResponse = await this.getSheetData(spreadsheetId);
+  //   const valuesInColumn = getResponse.data.values[0];
 
-    return result.data;
-  }
+  //   const targetId = data.patientId;
+
+  //   const targetIndex = valuesInColumn.indexOf(targetId);
+
+  //   const rangePatient = '';
+  //   const result = await this.client.spreadsheets.values.update({
+  //     spreadsheetId,
+  //     range: rangePatient,
+  //     valueInputOption: 'RAW',
+  //     requestBody: { values },
+  //   });
+
+  //   return result.data;
+  // }
 }
