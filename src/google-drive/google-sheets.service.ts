@@ -78,6 +78,8 @@ export class GoogleSheetsService {
         data.patientId,
         data.firstName,
         data.lastName,
+        data.age,
+        data.gender,
         data.address,
         data.location,
         data.email,
@@ -154,22 +156,97 @@ export class GoogleSheetsService {
     }
   }
 
-  // async updateSheetData(spreadsheetId: string, data: any): Promise<any> {
-  //   const getResponse = await this.getSheetData(spreadsheetId);
-  //   const valuesInColumn = getResponse.data.values[0];
+  async updateSheetData(spreadsheetId: string, data: any): Promise<any> {
+    try {
+      const getResponse = await this.getSheetData(spreadsheetId);
 
-  //   const targetId = data.patientId;
+      let indexToUpdate = 0;
+      try {
+        getResponse.filter((element, index) => {
+          if (element.patientId === data.patientId) {
+            indexToUpdate = index + 2;
+          }
+        });
+      } catch (e) {
+        console.log(e.message);
+      }
 
-  //   const targetIndex = valuesInColumn.indexOf(targetId);
+      const patientDetails = [
+        data.patientId,
+        data.firstName,
+        data.lastName,
+        data.age,
+        data.gender,
+        data.address,
+        data.location,
+        data.email,
+        data.phone,
+      ];
 
-  //   const rangePatient = '';
-  //   const result = await this.client.spreadsheets.values.update({
-  //     spreadsheetId,
-  //     range: rangePatient,
-  //     valueInputOption: 'RAW',
-  //     requestBody: { values },
-  //   });
+      const prescriptionDetails = [
+        data.physicianId,
+        data.patientId,
+        data.prescription,
+        data.dose,
+      ];
 
-  //   return result.data;
-  // }
+      const physicianDetails = [
+        data.physicianId,
+        data.physicianFirstName,
+        data.physicianlastName,
+        data.physicianNumber,
+      ];
+
+      const appointmentDetails = [
+        data.appointmentId,
+        data.patientId,
+        data.physicianId,
+        data.visitDate,
+        data.nextVisit,
+        data.bill,
+      ];
+
+      const rangePatient = `patient!A${indexToUpdate}:I${indexToUpdate}`;
+      const resultPatient = await this.client.spreadsheets.values.update({
+        spreadsheetId,
+        range: rangePatient,
+        valueInputOption: 'USER_ENTERED',
+        requestBody: { values: [patientDetails] },
+      });
+
+      const rangePrescription = `prescription!A${indexToUpdate}:D${indexToUpdate}`;
+      const resultPrescription = await this.client.spreadsheets.values.update({
+        spreadsheetId,
+        range: rangePrescription,
+        valueInputOption: 'USER_ENTERED',
+        requestBody: { values: [prescriptionDetails] },
+      });
+
+      const rangePhysician = `physician!A${indexToUpdate}:E${indexToUpdate}`;
+      const resultPhysician = await this.client.spreadsheets.values.update({
+        spreadsheetId,
+        range: rangePhysician,
+        valueInputOption: 'USER_ENTERED',
+        requestBody: { values: [physicianDetails] },
+      });
+
+      const rangeAppointment = `appointment!A${indexToUpdate}:F${indexToUpdate}`;
+      const resultAppointment = await this.client.spreadsheets.values.update({
+        spreadsheetId,
+        range: rangeAppointment,
+        valueInputOption: 'USER_ENTERED',
+        requestBody: { values: [appointmentDetails] },
+      });
+
+      return {
+        patientStatus: resultPatient.status,
+        prescriptionStatus: resultPrescription.status,
+        physicianStatus: resultPhysician.status,
+        appointmentStatus: resultAppointment.status,
+      };
+    } catch (e) {
+      console.log(e.message);
+      return { error: e.message };
+    }
+  }
 }
